@@ -98,18 +98,19 @@ class Backbone(BackboneBase):
 
 class Joiner(nn.Sequential):
     def __init__(self, backbone, position_embedding):
-        super().__init__(backbone, position_embedding)
+        super().__init__(backbone, position_embedding) # self[0] -> backbone, self[1] -> position_embedding
 
     def forward(self, tensor_list: NestedTensor):
-        xs = self[0](tensor_list)
+        xs = self[0](tensor_list)    # self[0](tensor_list) -> backbone(tensor_list)
         out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
             out.append(x)
             # position encoding
-            pos.append(self[1](x).to(x.dtype))
+            pos.append(self[1](x).to(x.dtype)) # to(x.dtype) make data type the same with x
+                                               # self[1](x) -> position_embedding(x)
 
-        return out, pos
+        return out, pos # output feature, output feature with position
 
 
 def build_backbone(args):

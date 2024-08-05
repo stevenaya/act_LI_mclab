@@ -178,7 +178,7 @@ def compute_dict_mean(epoch_dicts):
         result[k] = value_sum / num_items
     return result
 
-def detach_dict(d):
+def detach_dict(d): # make a dict without grad
     new_d = dict()
     for k, v in d.items():
         new_d[k] = v.detach()

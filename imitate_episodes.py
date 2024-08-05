@@ -109,7 +109,7 @@ def main(args):
     with open(stats_path, 'wb') as f:
         pickle.dump(stats, f)
 
-    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config) # model train
     best_epoch, min_val_loss, best_state_dict = best_ckpt_info
 
     # save best checkpoint
@@ -118,7 +118,7 @@ def main(args):
     print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
 
 
-def make_policy(policy_class, policy_config):
+def make_policy(policy_class, policy_config):  # define model/policy
     if policy_class == 'ACT':
         policy = ACTPolicy(policy_config)
     elif policy_class == 'CNNMLP':
@@ -316,7 +316,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
 def forward_pass(data, policy):
     image_data, qpos_data, action_data, is_pad = data
     image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
-    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None #<- a remind from developer
 
 
 def train_bc(train_dataloader, val_dataloader, config):
@@ -326,7 +326,20 @@ def train_bc(train_dataloader, val_dataloader, config):
     policy_class = config['policy_class']
     policy_config = config['policy_config']
 
-    set_seed(seed)
+    # policy_config = {'lr': args['lr'],
+    #                      'num_queries': args['chunk_size'],
+    #                      'kl_weight': args['kl_weight'],
+    #                      'hidden_dim': args['hidden_dim'],
+    #                      'dim_feedforward': args['dim_feedforward'],
+    #                      'lr_backbone': lr_backbone,
+    #                      'backbone': backbone,
+    #                      'enc_layers': enc_layers,
+    #                      'dec_layers': dec_layers,
+    #                      'nheads': nheads,
+    #                      'camera_names': camera_names,
+    #                      }
+
+    set_seed(seed) # control random number generation
 
     policy = make_policy(policy_class, policy_config)
     policy.cuda()
@@ -361,14 +374,19 @@ def train_bc(train_dataloader, val_dataloader, config):
         # training
         policy.train()
         optimizer.zero_grad()
+
         for batch_idx, data in enumerate(train_dataloader):
-            forward_dict = forward_pass(data, policy)
+
+            forward_dict = forward_pass(data, policy)  # forward: return policy(qpos_data, image_data, action_data, is_pad)
+                                                                       # policy = ACTPolicy(policy_config)
+
             # backward
             loss = forward_dict['loss']
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            train_history.append(detach_dict(forward_dict))
+            train_history.append(detach_dict(forward_dict)) # record history without grad
+
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
         print(f'Train loss: {epoch_train_loss:.5f}')
